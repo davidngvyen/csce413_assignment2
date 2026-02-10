@@ -12,8 +12,7 @@ DEFAULT_DELAY = 0.3
 
 def send_knock(target, port, delay):
     """Send a single knock to the target port."""
-    # TODO: Choose UDP or TCP knocks based on your design.
-    # Example TCP knock stub:
+    # TCP knock: connect and immediately close.
     try:
         with socket.create_connection((target, port), timeout=1.0):
             pass
@@ -30,10 +29,16 @@ def perform_knock_sequence(target, sequence, delay):
 
 def check_protected_port(target, protected_port):
     """Try connecting to the protected port after knocking."""
-    # TODO: Replace with real service connection if needed.
+    time.sleep(0.5)
     try:
-        with socket.create_connection((target, protected_port), timeout=2.0):
-            print(f"[+] Connected to protected port {protected_port}")
+        with socket.create_connection((target, protected_port), timeout=2.0) as s:
+            try:
+                banner = s.recv(1024).decode("utf-8", errors="replace").strip()
+                print(f"[+] Connected to port {protected_port}")
+                if banner:
+                    print(f"[+] Banner: {banner[:200]}")
+            except socket.timeout:
+                print(f"[+] Connected to port {protected_port}")
     except OSError:
         print(f"[-] Could not connect to protected port {protected_port}")
 

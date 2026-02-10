@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
 
 TARGET_IP=${1:-172.20.0.40}
 SEQUENCE=${2:-"1234,5678,9012"}
-PROTECTED_PORT=${3:-2222}
+CONTAINER="2_network_webapp"
+KNOCK_CONTAINER="2_network_port_knocking"
 
-echo "[1/3] Attempting protected port before knocking"
-nc -z -v "$TARGET_IP" "$PROTECTED_PORT" || true
+# Copy client into the Docker network
+docker cp knock_client.py "$CONTAINER":/tmp/ 2>/dev/null || true
 
+echo "[1/3] Before knocking — verify port is blocked"
+docker exec "$CONTAINER" python3 /tmp/knock_client.py --target "$TARGET_IP" --check
+
+echo ""
 echo "[2/3] Sending knock sequence: $SEQUENCE"
-python3 knock_client.py --target "$TARGET_IP" --sequence "$SEQUENCE" --check
+docker exec "$CONTAINER" python3 /tmp/knock_client.py --target "$TARGET_IP" --sequence "$SEQUENCE"
 
-echo "[3/3] Attempting protected port after knocking"
-nc -z -v "$TARGET_IP" "$PROTECTED_PORT" || true
-
+echo ""
+echo "[3/3] Server logs — verify knocks received and port opened"
+sleep 1
+docker logs "$KNOCK_CONTAINER" --tail 10
